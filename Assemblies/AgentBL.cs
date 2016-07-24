@@ -1,13 +1,10 @@
 ﻿using Assemblies.DataContext;
 using CsvHelper;
 using RealEstateAgencyApp.Entities;
-using System;
 using System.Collections.Generic;
+using System.Data.Entity.Infrastructure;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Assemblies
 {
@@ -22,69 +19,82 @@ namespace Assemblies
             _agencyBL = agencyBL;
         }
 
-        public void ProcessAgentCSV(List<AgentCSV> listOfAgentCSVs)
+        public void ProcessAgentCSVFromCSVFile(StreamReader readCsvFile)
         {
-            foreach (var agentCSV in listOfAgentCSVs)
+            var listOfAgentCSVs = ReturnAgentCSVFromCSVFile(readCsvFile);
+
+            if (listOfAgentCSVs.Count > 0)
             {
-                if (!string.IsNullOrEmpty(agentCSV.AgentName))
+                foreach (var agentCSV in listOfAgentCSVs)
                 {
-                    var agent = ReturnAgentIfExistByNameAndMobile(agentCSV.AgentName, agentCSV.AgentMobile);
-                    if (agent == null)
+                    if (!string.IsNullOrEmpty(agentCSV.AgentName))
                     {
-                        agent = new Agent();
+                        var validatedAgentEmailAddress =
+                            Utilities.ValidateAndReturnCleansedEmail(agentCSV.AgentEmail);
+                        var validatedAgentPhoneNumber =
+                            Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentCSV.AgentPhone);
+                        var validatedAgentMobileNumber =
+                            Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentCSV.AgentMobile);
+
+                        var trimmedAgentName = agentCSV.AgentName.Trim();
+
+                        var agent = ReturnAgentIfExistByNameAndMobile(trimmedAgentName, validatedAgentMobileNumber);
+                        if (agent == null)
+                        {
+                            agent = new Agent();
+                            _applicationDbContext.Agents.Add(agent);
+
+                            agent.Name = trimmedAgentName;
+                        }
+                        agent = ProcessAgentEmail(agent, validatedAgentEmailAddress);
+                        agent = ProcessAgentPhoneAndMobile(agent, validatedAgentMobileNumber, validatedAgentPhoneNumber);
+
+                        if (!string.IsNullOrEmpty(agentCSV.AgencyName))
+                        {
+                            var trimmedAgencyName = agentCSV.AgencyName.Trim();
+                            var validatedAgencyPhoneNumber =
+                                Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentCSV.AgencyPhone);
+
+                            var agency = _agencyBL.ProcessAgencyToDatabase(trimmedAgencyName, validatedAgencyPhoneNumber);
+
+                            agent.Agency = agency;
+                        }
                     }
-                    agent = ProcessAgentEmail(agent, agentCSV.AgentEmail);
-                    agent = ProcessAgentPhoneAndMobile(agent, agentCSV.AgentPhone, agentCSV.AgentPhone);
                 }
 
-                if (!string.IsNullOrEmpty(agentCSV.AgentName))
+                try
                 {
+                    _applicationDbContext.SaveChanges();
+                }
+                catch (DbUpdateConcurrencyException ex)
+                {
+                    var entry = ex.Entries.Single();
+                    entry.OriginalValues.SetValues(entry.GetDatabaseValues());
                 }
             }
-        }
-
-        //private string ValidateAndReturnCleansedAgentPhoneNumber(string agentMobileNumber)
-        //{
-        //    if (Utilities.ValidateIfAusPhoneNumberIsValid(agentMobileNumber))
-        //    {
-        //        return Utilities.CleansePhoneNumber(agentMobileNumber);
-        //    }
-
-        //    return string.Empty;
-        //}
-
-        private string ValidateAndReturnCleansedAgentEmail(string agentEmail)
-        {
-            if (Utilities.ValidateIfEmailIsValid(agentEmail))
-            {
-                return agentEmail.Trim();
-            }
-
-            return string.Empty;
         }
 
         private Agent ReturnAgentIfExistByNameAndMobile(string agentName, string agentMobile)
         {
-            var agent = _applicationDbContext.Agents.First(x => x.Name == agentName);
-            if (agent != null)
+            var listOfAgents = _applicationDbContext.Agents.Where(x => x.Name == agentName).ToList();
+            if (listOfAgents.Count > 0)
             {
-                var validatedAgentMobile = Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentMobile);
-
-                if (validatedAgentMobile != string.Empty)
+                foreach (var agent in listOfAgents)
                 {
-                    if (validatedAgentMobile == agent.Mobile)
+                    if (!string.IsNullOrEmpty(agentMobile) && !string.IsNullOrEmpty(agent.Mobile))
                     {
-                        return agent;
+                        if (agentMobile == agent.Mobile)
+                        {
+                            return agent;
+                        }                        
                     }
-                }
+                }                
             }
-
             return null;
         }
 
         private Agent ProcessAgentEmail(Agent agent, string agentEmail)
         {
-            agentEmail = ValidateAndReturnCleansedAgentEmail(agentEmail);
             if (!string.IsNullOrEmpty(agentEmail))
             {
                 agent.Email = agentEmail;
@@ -94,13 +104,11 @@ namespace Assemblies
 
         private Agent ProcessAgentPhoneAndMobile(Agent agent, string agentMobile, string agentPhoneNumber)
         {
-            agentPhoneNumber = Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentPhoneNumber);
             if (!string.IsNullOrEmpty(agentPhoneNumber))
             {
                 agent.Phone = agentPhoneNumber;
             }
 
-            agentMobile = Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentMobile);
             if (!string.IsNullOrEmpty(agentMobile))
             {
                 agent.Mobile = agentMobile;
@@ -108,23 +116,7 @@ namespace Assemblies
             return agent;
         }
 
-        private void UpdateAgentEmailAddress(Agent agent, string agentEmailAddress)
-        {
-            agent.Email = agentEmailAddress;
-            _applicationDbContext.SaveChanges();
-        }
-
-        private void CreateNewAgent(string agentName, string agentEmailAddress, string agentMobileNo)
-        {
-            var agent = new Agent();
-            agent.Name = agentName;
-            agent.Email = agentEmailAddress;
-            agent.Mobile = agentMobileNo;
-
-            _applicationDbContext.SaveChanges();
-        }
-
-        public List<AgentCSV> ReturnAgentCSVFromCSVFile(StreamReader readCsvFile)
+        private List<AgentCSV> ReturnAgentCSVFromCSVFile(StreamReader readCsvFile)
         {
             using (CsvReader csvReader = new CsvReader(readCsvFile))
             {
@@ -143,50 +135,3 @@ namespace Assemblies
         }
     }
 }
-
-//  while (csvReader.Read())
-//                {
-//                    var agentCSV = new AgentCSV();
-
-//var agent
-//                    if (csvReader.TryGetField<string>("AgentName", out agentNameField))
-//                    {                        
-//                        if (!string.IsNullOrEmpty(agentNameField))
-//                        {                            
-//                            if (!csvReader.TryGetField<string>("AgentEmail", out agentEmailField))
-//                            {
-//                                //LogError
-//                            }                           
-
-//                            if (!csvReader.TryGetField<string>("AgentPhone", out agentPhoneField))
-//                            {
-//                                //LogError
-//                            }
-
-//                            if (!csvReader.TryGetField<string>("AgentMobile", out agentMobileField))
-//                            {
-//                                //LogError
-//                            }
-
-//                            agentCSV.AgentName = agentNameField;
-//                            agentCSV.AgentEmail = agentEmailField;
-//                            agentCSV.AgentPhone = agentPhoneField;
-//                            agentCSV.AgentMobile = agentMobileField;
-
-//                        }
-//                    }
-
-//                    if (csvReader.TryGetField<string>("AgencyName", out agencyNameField))
-//                    {
-//                        if (!string.IsNullOrEmpty(agencyNameField))
-//                        {
-//                            agentCSV.AgencyName = agencyNameField;
-//                        }
-//                    }
-
-
-
-
-//                    v
-//                }
-//            }

@@ -10,6 +10,6 @@ namespace RealEstateAgencyApp.Entities
         public string AgencyName { get; set; }
         public string AgencyPhone { get; set; }
         
-        public List<Agent> Agents { get; set; }
+        public virtual ICollection<Agent> Agents { get; set; }
     }
 }

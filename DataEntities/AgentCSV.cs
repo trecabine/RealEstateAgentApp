@@ -13,6 +13,6 @@ namespace RealEstateAgencyApp.Entities
         public string AgentPhone { get; set; }
         public string AgentMobile { get; set; }
         public string AgencyName { get; set; }
-        public string AgentcyPhone { get; set; }
+        public string AgencyPhone { get; set; }
     }
 }

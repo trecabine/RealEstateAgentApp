@@ -1,10 +1,7 @@
 ﻿using Assemblies.DataContext;
 using RealEstateAgencyApp.Entities;
-using System;
-using System.Collections.Generic;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Assemblies
 {
@@ -19,30 +16,55 @@ namespace Assemblies
 
         private Agency ReturnAgencyIfExistByPhoneNumber(string agencyPhoneNumber)
         {
-            agencyPhoneNumber = Utilities.ValidateAndReturnCleansedAusPhoneNumber(agencyPhoneNumber);
-
-            if (string.IsNullOrEmpty(agencyPhoneNumber))
+            if (!string.IsNullOrEmpty(agencyPhoneNumber))
             {
-                return _applicationDbContext.Agencies.First(a => a.AgencyPhone == agencyPhoneNumber);
+                return _applicationDbContext.Agencies.FirstOrDefault(a => a.AgencyPhone == agencyPhoneNumber);
             }
             return null;
+        }
+
+        private Agency ReturnAgencyIfExistByName(string agencyName)
+        {
+            return _applicationDbContext.Agencies.FirstOrDefault(a => a.AgencyName == agencyName);
         }
 
         public Agency ProcessAgencyToDatabase(string agencyName, string agencyPhoneNumber)
         {
             var agency = ReturnAgencyIfExistByPhoneNumber(agencyPhoneNumber);
-            agencyPhoneNumber = Utilities.ValidateAndReturnCleansedAusPhoneNumber(agencyPhoneNumber);
 
             if (agency == null)
             {
-                agency = new Agency();
-            }
-            
-            if (string.IsNullOrEmpty(agencyPhoneNumber))
-            {
-                agency.AgencyName = agencyName;
+                agency = ReturnAgencyIfExistByName(agencyName);
+
+                if (agency == null)
+                {
+                    agency = new Agency();
+                    agency.AgencyName = agencyName;
+                    _applicationDbContext.Agencies.Add(agency);
+                }
+
                 agency.AgencyPhone = agencyPhoneNumber;
             }
+            else
+            {
+                if (!string.IsNullOrEmpty(agencyPhoneNumber))
+                {
+                    if (agency.AgencyPhone != agencyPhoneNumber)
+                    {
+                        agency.AgencyPhone = agencyPhoneNumber;
+                    }
+                }
+            }
+
+            //try
+            //{
+            //    _applicationDbContext.SaveChanges();
+            //}
+            //catch (DbUpdateConcurrencyException ex)
+            //{
+            //    var entry = ex.Entries.Single();
+            //    entry.OriginalValues.SetValues(entry.GetDatabaseValues());
+            //}
 
             return agency;
         }

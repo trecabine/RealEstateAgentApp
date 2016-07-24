@@ -1,10 +1,5 @@
 ﻿using Assemblies;
-using CsvHelper;
-using System;
-using System.Collections.Generic;
-using System.Data;
 using System.IO;
-using System.Linq;
 using System.Web;
 using System.Web.Mvc;
 
@@ -14,32 +9,35 @@ namespace RealEstateAgencyApp.Controllers
     {
         private IAgentBL _agentBL;
 
+        public AgentController()
+        {
+            
+        }
+
         public AgentController(IAgentBL agentBL)
         {
             _agentBL = agentBL;
         }
 
-        public ActionResult Index()
+        public ActionResult Upload()
         {
             return View();
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult UploadAgent(HttpPostedFile postedFile)
+        public ActionResult Upload(HttpPostedFileBase file)
         {
             if (ModelState.IsValid)
             {
-                if (postedFile != null && postedFile.ContentLength > 0)
+                if (file != null && file.ContentLength > 0)
                 {
-                    if (postedFile.FileName.EndsWith(".csv"))
+                    if (file.FileName.EndsWith(".csv"))
                     {
-                        var stream = postedFile.InputStream;
+                        var stream = file.InputStream;
                         var readCsvFile = new StreamReader(stream);
 
-                        var listOfAgentsFromCsvFile = _agentBL.ReturnAgentCSVFromCSVFile(readCsvFile);
-
-
+                        _agentBL.ProcessAgentCSVFromCSVFile(readCsvFile);
 
                     }
                     else
@@ -55,11 +53,6 @@ namespace RealEstateAgencyApp.Controllers
             }
 
             return View();
-        }
-
-        private void CheckCSVFile()
-        {
-
-        }
+        }       
     }
 }
