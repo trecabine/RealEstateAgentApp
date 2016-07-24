@@ -1,0 +1,4 @@
+C:\Users\Elbert\Documents\Development\RealEstateAgencyApp\DataEntities\bin\Debug\DataEntities.dll
+C:\Users\Elbert\Documents\Development\RealEstateAgencyApp\DataEntities\bin\Debug\DataEntities.pdb
+C:\Users\Elbert\Documents\Development\RealEstateAgencyApp\DataEntities\obj\Debug\DataEntities.dll
+C:\Users\Elbert\Documents\Development\RealEstateAgencyApp\DataEntities\obj\Debug\DataEntities.pdb
