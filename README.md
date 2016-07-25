@@ -5,7 +5,9 @@ This is built using Entity Framework 6, which using CodeFirst migration.
 
 
 ##Assumptions
-
+1. Unique agent is determined by the Agent Name AND Mobile
+2. Unique agency is determined by the Agency Phone number
+3. Only AUS phone number (including 1300 number and mobile number) that is recognized for validation and sanitation of the data.
 
 
 ##Setting Up
@@ -25,10 +27,11 @@ Make sure to change the connection string of the `DefaultConnection` to the PROD
 Database-Update
 '''
 
-This will create all the necessary Tables and Relationships to the MS SQL Server that have been set in the config
+This will create all the necessary Tables and Relationships to the MS SQL Server Db that have been set in the config
 
 
-
+##Known Issues
+-. The misspelt agency with a possible updated phone number, is taken as a new agency, causing duplicate agency.
 
 
 
