@@ -11,11 +11,18 @@ namespace Assemblies
 
         public static string CleansePhoneNumber(string phoneNumberToBeCleansed)
         {
-            return phoneNumberToBeCleansed.Replace(" ", "")
+            var cleansedPhoneNumber = phoneNumberToBeCleansed.Replace(" ", "")
                 .Replace("(", "")
                 .Replace(")", "")
                 .Replace("-", "")
                 .Trim();
+
+            if (!cleansedPhoneNumber.StartsWith("0"))
+            {
+                cleansedPhoneNumber.Insert(0, "0");
+            }
+
+            return cleansedPhoneNumber;
         }
 
         public static bool ValidateIfAusPhoneNumberIsValid(string phoneNumberToBeValidated)
