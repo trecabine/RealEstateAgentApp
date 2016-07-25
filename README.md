@@ -24,7 +24,7 @@ Make sure to change the connection string of the `DefaultConnection` to the PROD
 3. Run these command
 
 ```
-Database-Update
+Update-Database
 ```
 
 This will create all the necessary Tables and Relationships to the MS SQL Server Db that have been set in the config
