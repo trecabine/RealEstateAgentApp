@@ -23,16 +23,11 @@ Make sure to change the connection string of the `DefaultConnection` to the PROD
 2. Go to your Package Manager Console and make sure the `Default project` is pointing to `Assemblies`
 3. Run these command
 
-'''
+```
 Database-Update
-'''
+```
 
 This will create all the necessary Tables and Relationships to the MS SQL Server Db that have been set in the config
-
-
-##Known Issues
--. The misspelt agency with a possible updated phone number, is taken as a new agency, causing duplicate agency.
-
 
 
 
