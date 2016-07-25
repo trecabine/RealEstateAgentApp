@@ -34,39 +34,29 @@ namespace Assemblies
 
             if (agency == null)
             {
-                agency = ReturnAgencyIfExistByName(agencyName);
+                agency = new Agency();
+                agency.AgencyName = agencyName;
 
-                if (agency == null)
-                {
-                    agency = new Agency();
-                    agency.AgencyName = agencyName;
-                    _applicationDbContext.Agencies.Add(agency);
-                }
-
-                agency.AgencyPhone = agencyPhoneNumber;
+                _applicationDbContext.Agencies.Add(agency);                
             }
-            else
-            {
-                if (!string.IsNullOrEmpty(agencyPhoneNumber))
-                {
-                    if (agency.AgencyPhone != agencyPhoneNumber)
-                    {
-                        agency.AgencyPhone = agencyPhoneNumber;
-                    }
-                }
-            }
+            agency.AgencyPhone = agencyPhoneNumber;
 
-            //try
-            //{
-            //    _applicationDbContext.SaveChanges();
-            //}
-            //catch (DbUpdateConcurrencyException ex)
-            //{
-            //    var entry = ex.Entries.Single();
-            //    entry.OriginalValues.SetValues(entry.GetDatabaseValues());
-            //}
-
+            //SaveChanges();
+            
             return agency;
+        }
+
+        private void SaveChanges()
+        {
+            try
+            {
+                _applicationDbContext.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                var entry = ex.Entries.Single();
+                entry.OriginalValues.SetValues(entry.GetDatabaseValues());
+            }
         }
     }
 }

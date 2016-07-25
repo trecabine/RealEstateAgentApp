@@ -13,9 +13,9 @@ namespace Assemblies
         private ApplicationDbContext _applicationDbContext;
         private IAgencyBL _agencyBL;
 
-        public AgentBL(ApplicationDbContext applicationDbContext, IAgencyBL agencyBL)
+        public AgentBL(IAgencyBL agencyBL)
         {
-            _applicationDbContext = applicationDbContext;
+            _applicationDbContext = new ApplicationDbContext();
             _agencyBL = agencyBL;
         }
 
@@ -56,7 +56,7 @@ namespace Assemblies
                                 Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentCSV.AgencyPhone);
 
                             var agency = _agencyBL.ProcessAgencyToDatabase(trimmedAgencyName, validatedAgencyPhoneNumber);
-
+                            
                             agent.Agency = agency;
                         }
                     }
@@ -86,9 +86,10 @@ namespace Assemblies
                         if (agentMobile == agent.Mobile)
                         {
                             return agent;
-                        }                        
+                        }
                     }
-                }                
+                    return agent;
+                }
             }
             return null;
         }
