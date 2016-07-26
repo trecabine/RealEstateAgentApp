@@ -13,9 +13,9 @@ namespace Assemblies
         private ApplicationDbContext _applicationDbContext;
         private IAgencyBL _agencyBL;
 
-        public AgentBL(IAgencyBL agencyBL)
+        public AgentBL(ApplicationDbContext applicationDbContext, IAgencyBL agencyBL)
         {
-            _applicationDbContext = new ApplicationDbContext();
+            _applicationDbContext = applicationDbContext;
             _agencyBL = agencyBL;
         }
 

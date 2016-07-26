@@ -7,25 +7,31 @@ namespace Assemblies
 {
     public class AgencyBL : IAgencyBL
     {
-        private ApplicationDbContext _applicationDbContext;
-
-        public AgencyBL(ApplicationDbContext applicationDbContext)
+        public AgencyBL()
         {
-            _applicationDbContext = applicationDbContext;
         }
 
         private Agency ReturnAgencyIfExistByPhoneNumber(string agencyPhoneNumber)
         {
-            if (!string.IsNullOrEmpty(agencyPhoneNumber))
+            Agency agency = null;
+            using (var dbContext = new ApplicationDbContext())
             {
-                return _applicationDbContext.Agencies.FirstOrDefault(a => a.AgencyPhone == agencyPhoneNumber);
+                if (!string.IsNullOrEmpty(agencyPhoneNumber))
+                {
+                    agency = dbContext.Agencies.FirstOrDefault(a => a.AgencyPhone == agencyPhoneNumber);
+                }
             }
-            return null;
+            return agency;
         }
 
         private Agency ReturnAgencyIfExistByName(string agencyName)
         {
-            return _applicationDbContext.Agencies.FirstOrDefault(a => a.AgencyName == agencyName);
+            Agency agency = null;
+            using (var dbContext = new ApplicationDbContext())
+            {
+                agency = dbContext.Agencies.FirstOrDefault(a => a.AgencyName == agencyName);
+            }
+            return agency;
         }
 
         public Agency ProcessAgencyToDatabase(string agencyName, string agencyPhoneNumber)
@@ -36,21 +42,23 @@ namespace Assemblies
             {
                 agency = new Agency();
                 agency.AgencyName = agencyName;
+                agency.AgencyPhone = agencyPhoneNumber;
 
-                _applicationDbContext.Agencies.Add(agency);                
+                using (var dbContext = new ApplicationDbContext())
+                {
+                    dbContext.Agencies.Add(agency);
+                    SaveChanges(dbContext);
+                }
             }
-            agency.AgencyPhone = agencyPhoneNumber;
 
-            //SaveChanges();
-            
             return agency;
         }
 
-        private void SaveChanges()
+        private void SaveChanges(ApplicationDbContext dbContext)
         {
             try
             {
-                _applicationDbContext.SaveChanges();
+                dbContext.SaveChanges();
             }
             catch (DbUpdateConcurrencyException ex)
             {
