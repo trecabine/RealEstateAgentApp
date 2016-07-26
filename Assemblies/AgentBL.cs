@@ -10,12 +10,10 @@ namespace Assemblies
 {
     public class AgentBL : IAgentBL
     {
-        private ApplicationDbContext _applicationDbContext;
         private IAgencyBL _agencyBL;
 
-        public AgentBL(ApplicationDbContext applicationDbContext, IAgencyBL agencyBL)
+        public AgentBL(IAgencyBL agencyBL)
         {
-            _applicationDbContext = applicationDbContext;
             _agencyBL = agencyBL;
         }
 
@@ -23,14 +21,19 @@ namespace Assemblies
         {
             var listOfAgentCSVs = ReturnAgentCSVFromCSVFile(readCsvFile);
 
-            if (listOfAgentCSVs.Count > 0)
+            using (var dbContext = new ApplicationDbContext())
             {
-                foreach (var agentCSV in listOfAgentCSVs)
+                if (listOfAgentCSVs.Count > 0)
                 {
-                    if (!string.IsNullOrEmpty(agentCSV.AgentName))
+                    foreach (var agentCSV in listOfAgentCSVs)
                     {
+                        if (string.IsNullOrEmpty(agentCSV.AgentName))
+                        {
+                            return;
+                        }
+
                         var validatedAgentEmailAddress =
-                            Utilities.ValidateAndReturnCleansedEmail(agentCSV.AgentEmail);
+                                Utilities.ValidateAndReturnCleansedEmail(agentCSV.AgentEmail);
                         var validatedAgentPhoneNumber =
                             Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentCSV.AgentPhone);
                         var validatedAgentMobileNumber =
@@ -39,59 +42,56 @@ namespace Assemblies
                         var trimmedAgentName = agentCSV.AgentName.Trim();
 
                         var agent = ReturnAgentIfExistByNameAndMobile(trimmedAgentName, validatedAgentMobileNumber);
-                        if (agent == null)
-                        {
-                            agent = new Agent();
-                            _applicationDbContext.Agents.Add(agent);
-
-                            agent.Name = trimmedAgentName;
-                        }
+                        
                         agent = ProcessAgentEmail(agent, validatedAgentEmailAddress);
-                        agent = ProcessAgentPhoneAndMobile(agent, validatedAgentMobileNumber, validatedAgentPhoneNumber);
+                        agent = ProcessAgentPhoneAndMobile(agent, validatedAgentMobileNumber,
+                            validatedAgentPhoneNumber);
 
                         if (!string.IsNullOrEmpty(agentCSV.AgencyName))
                         {
-                            var trimmedAgencyName = agentCSV.AgencyName.Trim();
                             var validatedAgencyPhoneNumber =
                                 Utilities.ValidateAndReturnCleansedAusPhoneNumber(agentCSV.AgencyPhone);
 
-                            var agency = _agencyBL.ProcessAgencyToDatabase(trimmedAgencyName, validatedAgencyPhoneNumber);
-                            
+                            var agency = _agencyBL.ProcessAgencyToDatabase(agentCSV.AgencyName.Trim(),
+                                validatedAgencyPhoneNumber);
+
                             agent.Agency = agency;
+                        }
+
+                        if (agent.Id == 0)
+                        {
+                            agent.Name = trimmedAgentName;
+                            dbContext.Agents.Add(agent);
                         }
                     }
                 }
 
-                try
-                {
-                    _applicationDbContext.SaveChanges();
-                }
-                catch (DbUpdateConcurrencyException ex)
-                {
-                    var entry = ex.Entries.Single();
-                    entry.OriginalValues.SetValues(entry.GetDatabaseValues());
-                }
+                SaveChanges(dbContext);
             }
         }
 
         private Agent ReturnAgentIfExistByNameAndMobile(string agentName, string agentMobile)
         {
-            var listOfAgents = _applicationDbContext.Agents.Where(x => x.Name == agentName).ToList();
-            if (listOfAgents.Count > 0)
+            var agentEntity = new Agent();
+            using (var dbContext = new ApplicationDbContext())
             {
-                foreach (var agent in listOfAgents)
+                var listOfAgents = dbContext.Agents.Where(x => x.Name == agentName).ToList();
+                if (listOfAgents.Count > 0)
                 {
-                    if (!string.IsNullOrEmpty(agentMobile) && !string.IsNullOrEmpty(agent.Mobile))
+                    var agentWithMobile = listOfAgents.FirstOrDefault(x => x.Mobile == agentMobile);
+                    var agentWithoutMobile = listOfAgents.FirstOrDefault(x => x.Name == agentName);
+
+                    if (agentWithMobile != null)
                     {
-                        if (agentMobile == agent.Mobile)
-                        {
-                            return agent;
-                        }
+                        agentEntity = agentWithMobile;
                     }
-                    return agent;
+                    else
+                    {
+                        agentEntity = agentWithoutMobile;
+                    }
                 }
             }
-            return null;
+            return agentEntity;
         }
 
         private Agent ProcessAgentEmail(Agent agent, string agentEmail)
@@ -132,6 +132,19 @@ namespace Assemblies
                 var agentCSVs = csvReader.GetRecords<AgentCSV>().ToList();
 
                 return agentCSVs;
+            }
+        }
+
+        private void SaveChanges(ApplicationDbContext dbContext)
+        {
+            try
+            {
+                dbContext.SaveChanges();
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                var entry = ex.Entries.Single();
+                entry.OriginalValues.SetValues(entry.GetDatabaseValues());
             }
         }
     }

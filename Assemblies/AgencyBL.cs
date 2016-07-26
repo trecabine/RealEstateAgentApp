@@ -13,7 +13,7 @@ namespace Assemblies
 
         private Agency ReturnAgencyIfExistByPhoneNumber(string agencyPhoneNumber)
         {
-            Agency agency = null;
+            var agency = new Agency();
             using (var dbContext = new ApplicationDbContext())
             {
                 if (!string.IsNullOrEmpty(agencyPhoneNumber))
@@ -26,7 +26,7 @@ namespace Assemblies
 
         private Agency ReturnAgencyIfExistByName(string agencyName)
         {
-            Agency agency = null;
+            var agency = new Agency();
             using (var dbContext = new ApplicationDbContext())
             {
                 agency = dbContext.Agencies.FirstOrDefault(a => a.AgencyName == agencyName);
